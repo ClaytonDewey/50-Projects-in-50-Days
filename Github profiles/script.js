@@ -8,8 +8,20 @@ async function getUser(username) {
     try {
         const { data } = await axios(APIURL + username);
         createUserCard(data);
+        getRepos(username)
     } catch (err) {
-        console.error(err);
+        if (err.response.status === 404) {
+            createErrorCard("No profile with this username");
+        }
+    }
+}
+
+async function getRepos(username) {
+    try {
+        const { data } = await axios(APIURL + username + '/repos?sort=created_at');
+        addReposToCard(data);
+    } catch (err) {
+        createErrorCard("Problem fetching repos");
     }
 }
 
@@ -17,26 +29,48 @@ function createUserCard(user) {
     const cardHTML = `
     <div class="card">
             <div>
-                <img src="https://randomuser.me/api/portraits/men/30.jpg" alt="" class="avatar">
+                <img src="${user.avatar_url}" alt="${user.name}" class="avatar">
             </div>
             <div class="user-info">
-                <h2>John Doe</h2>
-                <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Et, dolorem.</p>
+                <h2>${user.name === null ? "No username defined" : user.name}</h2>
+                <p>${user.bio === null ? "Bio is not available for this user" : user.bio}</p>
                 <ul>
-                    <li>300 <strong>Followers</strong></li>
-                    <li>100 <strong>Following</strong></li>
-                    <li>30 <strong>Repos</strong></li>
+                    <li>${user.followers} <strong>Followers</strong></li>
+                    <li>${user.following} <strong>Following</strong></li>
+                    <li>${user.public_repos} <strong>Repos</strong></li>
                 </ul>
 
-                <div id="repos">
-                    <a href="#" class="repos">Repo 1</a>
-                    <a href="#" class="repos">Repo 2</a>
-                    <a href="#" class="repos">Repo 3</a>
-                </div>
+                <div id="repos"></div>
             </div>
         </div>
     `;
     main.innerHTML = cardHTML;
+}
+
+function createErrorCard(msg) {
+    const cardHTML = `
+        <div class="card">
+            <h1>${msg}</h1>
+        </div>
+    `;
+
+    main.innerHTML = cardHTML;
+}
+
+function addReposToCard(repos) {
+    const reposEl = document.getElementById("repos");
+
+    repos
+        .slice(0, 5)
+        .forEach((repo) => {
+            const repoEl = document.createElement("a");
+            repoEl.classList.add("repo");
+            repoEl.href = repo.html_url
+            repoEl.target = "_blank";
+            repoEl.innerText = repo.name;
+
+            reposEl.appendChild(repoEl)
+        })
 }
 
 form.addEventListener("submit", (e) => {
